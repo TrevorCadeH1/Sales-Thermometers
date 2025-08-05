@@ -356,7 +356,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
 
 def main():
-    st.title("🌡️ Sales & Gross Profit Thermometer Dashboard")
+    st.title("Sales & Gross Profit Thermometer Dashboard")
     st.markdown("---")
     
     # File uploader
