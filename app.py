@@ -6,6 +6,11 @@ import numpy as np
 from datetime import datetime
 
 # Set page config
+st.set_page_config(
+    page_title="Sales & Gross Profit Thermometer Dashboard",
+    page_icon="🌡️",
+    layout="wide"
+)
 
 # Inject custom font CSS for wurthfont and set all text color to #000000 globally
 st.markdown(
@@ -13,7 +18,7 @@ st.markdown(
     <style>
     @font-face {
         font-family: 'wurthfont';
-        src: url('ffonts/wurthfont.ttf') format('truetype');
+        src: url('fonts/wurthfont.ttf') format('truetype');
         font-weight: normal;
         font-style: normal;
     }
@@ -377,15 +382,13 @@ def main():
     )
     st.markdown("---")
     
-    # File uploader with custom font and color (wurthfont, #000000) applied via inline style, avoiding <span>
+    # File uploader with wurthfont and black color
     st.markdown(
-        "<div style='font-family:wurthfont; color:#000000; font-size:18px; font-weight:bold;'>"
-        "Upload your Excel file with daily data (tab 1) and goals (tab 2)"
-        "</div>",
+        "<div style='font-family:wurthfont; color:#000000; font-size:16px;'>Upload your Excel file with daily data (tab 1) and goals (tab 2)</div>",
         unsafe_allow_html=True
     )
     uploaded_file = st.file_uploader(
-        label="",  # Hide default label
+        "", 
         type=['xlsx', 'xls']
     )
     
@@ -397,23 +400,19 @@ def main():
             # Get unique companies
             companies = df['Company'].unique()
             
-            # Sidebar for controls with wurthfont and black color
+            # Sidebar for controls
             st.sidebar.markdown(
-                "<div style='font-family:wurthfont; color:#000000; font-size:20px; font-weight:bold;'>Dashboard Controls</div>",
+                "<h2 style='font-family:wurthfont; color:#000000;'>Dashboard Controls</h2>",
                 unsafe_allow_html=True
             )
             
-            # Total days in month with wurthfont and black color
+            # Total days in month (styled with wurthfont and black color)
             st.sidebar.markdown(
-                "<div style='font-family:wurthfont; color:#000000; font-size:16px; font-weight:bold;'>Total Days in Month</div>",
+                "<div style='font-family:wurthfont; color:#000000; font-size:16px;'>Total Days in Month</div>",
                 unsafe_allow_html=True
             )
             total_days = st.sidebar.number_input(
-                label="",
-                value=31,
-                min_value=1,
-                max_value=31,
-                key="total_days_input"
+                "", value=31, min_value=1, max_value=31, key="total_days_input"
             )
             
             # Display summary stats
@@ -503,20 +502,10 @@ def main():
                     cols = st.columns(4)
 
         else:
-            st.markdown(
-                "<div style='font-family:wurthfont; color:#000000; font-size:18px; font-weight:bold;'>"
-                "Failed to load data. Please check your Excel file format."
-                "</div>",
-                unsafe_allow_html=True
-            )
+            st.error("Failed to load data. Please check your Excel file format.")
     
     else:
-        st.markdown(
-            "<div style='font-family:wurthfont; color:#000000; font-size:18px;'>"
-            "👆 Please upload your Excel file to get started!"
-            "</div>",
-            unsafe_allow_html=True
-        )
+        st.info("👆 Please upload your Excel file to get started!")
 
 if __name__ == "__main__":
     main()
