@@ -334,7 +334,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     month_name = 'Current Month'
     fig.update_layout(
         title=dict(
-            text=f"{company_name.upper()} {metric_type.upper()}<br>Month Goal: ${monthly_target:,.0f}",
+            text=f"{company_name.upper()} {metric_type.upper()}<br>Monthly Goal: ${monthly_target:,.0f}",
             x=0.42,
             xanchor='center',
             yanchor='top',
