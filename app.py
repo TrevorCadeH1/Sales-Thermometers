@@ -23,7 +23,7 @@ st.markdown(
         font-style: normal;
     }
     html, body, [class^="st-"], [class*=" st-"], .stText, .stMarkdown, .stMetric, .stTitle, .stHeader, .stDataFrame, .stTable, .stSubheader, .stCaption, .stButton, .stRadio, .stSelectbox, .stSidebar, .stNumberInput, .stFileUploader, .stAlert, .stInfo, .stError, .stSuccess, .stWarning {
-        font-family: 'wurthfont', Times New Roman, Times, serif !important;
+        font-family: 'wurthfont';
         color: #000000 !important;
     }
     </style>
