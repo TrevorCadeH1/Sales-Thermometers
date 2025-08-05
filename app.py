@@ -181,7 +181,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     # Calculate bulb position and tube start
     bulb_center_y = 10
     bulb_radius = 0  # Approximate radius based on size=150
-    tube_start_y = 24  # Top of the bulb
+    tube_start_y = 23.5  # Top of the bulb
     tube_height = 100 - tube_start_y  # Available tube height for 100%
 
     # Percentages adjusted for tube position
