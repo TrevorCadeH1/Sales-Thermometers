@@ -207,7 +207,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     fig.add_annotation(
         x=0.25,
         y=green_top_y,
-        text=f"${yesterday_value:,.0f}",
+        text=f"<b>${yesterday_value:,.0f}</b>",
         showarrow=True,
         arrowhead=2,
         arrowcolor='#28a745',
@@ -291,14 +291,14 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     fig.add_annotation(
         x=-0.2,
         y=expected_percent,
-        text=f"100% Pace<br>{current_day} days in",
+        text=f"<b>100% Pace<br>{current_day} days in</b>",
         showarrow=True,
         arrowhead=2,
         arrowcolor='#007bff',
         arrowwidth=2,
         ax=-30,
         ay=0,
-        font=dict(size=12, color='#007bff'),
+        font=dict(size=13, color='#007bff'),
         xanchor='right',
         yanchor='middle'
     )
