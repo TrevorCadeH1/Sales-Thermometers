@@ -6,10 +6,24 @@ import numpy as np
 from datetime import datetime
 
 # Set page config
-st.set_page_config(
-    page_title="Sales & Gross Profit Thermometer Dashboard",
-    page_icon="🌡️",
-    layout="wide"
+
+# Inject custom font CSS for wurthfont and set all text color to #000000 globally
+st.markdown(
+    """
+    <style>
+    @font-face {
+        font-family: 'wurthfont';
+        src: url('ffonts/wurthfont.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+    html, body, [class^="st-"], [class*=" st-"], .stText, .stMarkdown, .stMetric, .stTitle, .stHeader, .stDataFrame, .stTable, .stSubheader, .stCaption, .stButton, .stRadio, .stSelectbox, .stSidebar, .stNumberInput, .stFileUploader, .stAlert, .stInfo, .stError, .stSuccess, .stWarning {
+        font-family: 'wurthfont', Times New Roman, Times, serif !important;
+        color: #000000 !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
 @st.cache_data
@@ -178,7 +192,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         x=["Thermometer"],
         y=[previous_days_percent],
         base=[tube_start_y],
-        marker=dict(color='red'),
+        marker=dict(color='#CC0000'),
         name='Previous Days',
         width=0.25,
     ))
@@ -188,7 +202,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         x=["Thermometer"],
         y=[yesterday_percent],
         base=[previous_days_percent + tube_start_y],
-        marker=dict(color='#28a745'),
+        marker=dict(color='#008448'),
         name="Yesterday's Sales",
         width=0.25,
     ))
@@ -198,9 +212,9 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     fig.add_annotation(
         x=0.35,
         y=green_top_y + 2,  # Position "YESTERDAY" label above the number
-        text="YESTERDAY",
+        text="<b>YESTERDAY</b>",
         showarrow=False,
-        font=dict(size=10, color='#28a745', family="Arial Black"),
+        font=dict(size=12, color='#008448', family="wurthfont"),
         xanchor='left',
         yanchor='bottom'
     )
@@ -210,11 +224,11 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         text=f"<b>${yesterday_value:,.0f}</b>",
         showarrow=True,
         arrowhead=2,
-        arrowcolor='#28a745',
+        arrowcolor='#008448',
         arrowwidth=2,
         ax=60,
         ay=0,
-        font=dict(size=14, color='#28a745')
+        font=dict(size=14, color='#008448', family="wurthfont")
     )
 
     # Large red bulb at bottom
@@ -224,20 +238,21 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         mode='markers',
         marker=dict(
             size=100,
-            color='red',
-            line=dict(color='black', width=2),
+            color='#CC0000',
+            line=dict(color='#000000', width=2),
             symbol='circle'
         ),
         showlegend=False
     ))
 
-    # Add company name and total inside the bulb (larger font)
+    # Add company name and metric type inside the bulb (larger font, bold, centered)
+    bulb_label = f"<b>{company_name.upper()}<br>{'SALES' if metric_type == 'Sales' else 'GP'}</b>"
     fig.add_annotation(
         x=0,
         y=bulb_center_y,
-        text=f"<br>TOTAL: <br> ${current_total:,.0f}",
+        text=bulb_label,
         showarrow=False,
-        font=dict(size=12, color='white', family="Arial Black"),
+        font=dict(size=16, color='white', family="wurthfont"),
         xanchor='center',
         yanchor='middle'
     )
@@ -248,7 +263,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         y=bulb_center_y,
         text=f"<b>{current_day} out of<br>{total_days} Days</b>",
         showarrow=False,
-        font=dict(size=14, color='black'),
+        font=dict(size=16, color='#000000', family="wurthfont"),
         xanchor='left',
         yanchor='middle',
         align='left',
@@ -262,7 +277,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         x1=-0.125,
         y0=tube_start_y,
         y1=tube_start_y + tube_height,
-        line=dict(color='black', width=1)
+        line=dict(color='#000000', width=1)
     )
 
     # Draw right side of tube
@@ -272,7 +287,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         x1=0.125,
         y0=tube_start_y,
         y1=tube_start_y + tube_height,
-        line=dict(color='black', width=1)
+        line=dict(color='#000000', width=1)
     )
 
     # Target pace line (blue horizontal line) - positioned correctly within tube
@@ -281,24 +296,24 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         x0=-0.15, x1=0.15,
         y0=expected_percent,
         y1=expected_percent,
-        line=dict(color='#007bff', width=3)
+        line=dict(color='#0093DD', width=3)
     )
 
     # Recalculate total_percent to account for tube starting position
     total_percent_adjusted = total_percent + tube_start_y
 
-    # Target pace annotation - back to original position pointing at pace line
+    # Target pace annotation - bring arrow and text closer together
     fig.add_annotation(
-        x=-0.2,
+        x=-0.17,  # Keep text to the left
         y=expected_percent,
-        text=f"<b>100% Pace<br>{current_day} days in</b>",
+        text=f"<b>100% Pace<br>{current_day} days in<br>${(monthly_target - current_total) / max(1, total_days - current_day):,.0f} <br> per day needed<br> for Goal",
         showarrow=True,
         arrowhead=2,
-        arrowcolor='#007bff',
+        arrowcolor='#0093DD',
         arrowwidth=2,
-        ax=-30,
+        ax=-20,   # Less negative: shorter arrow, brings text closer
         ay=0,
-        font=dict(size=13, color='#007bff'),
+        font=dict(size=13, color='#0093DD', family="wurthfont"),
         xanchor='right',
         yanchor='middle'
     )
@@ -315,7 +330,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
                 x1=0.125,
                 y0=tube_position,
                 y1=tube_position,
-                line=dict(color='black', width=2)
+                line=dict(color='#000000', width=2)
             )
             # Label
             fig.add_annotation(
@@ -323,7 +338,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
                 y=tube_position,
                 text=f"{pct}%",
                 showarrow=False,
-                font=dict(size=10, color='black'),
+                font=dict(size=10, color='#000000', family="wurthfont"),
                 xanchor='left',
                 yanchor='middle'
             )
@@ -334,13 +349,13 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     month_name = 'Current Month'
     fig.update_layout(
         title=dict(
-            text=f"{company_name.upper()} {metric_type.upper()}<br>Monthly Goal: ${monthly_target:,.0f}",
+            text=f"Monthly Goal:<br>${current_total:,.0f} / ${monthly_target:,.0f}",
             x=0.42,
             xanchor='center',
             yanchor='top',
-            font=dict(size=16, family="Arial Black", color='black')
+            font=dict(size=16, family="wurthfont", color='#000000')
         ),
-        yaxis=dict(range=[-10, tube_start_y + tube_height + 10], showgrid=False, showticklabels=False, zeroline=False),
+        yaxis=dict(range=[-10, tube_start_y + tube_height + 4], showgrid=False, showticklabels=False, zeroline=False),
         xaxis=dict(showticklabels=False, range=[-0.4, 0.6]),
         height=500,
         width=300,
@@ -356,12 +371,21 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
 
 def main():
-    st.title("Sales & Gross Profit Thermometer Dashboard")
+    st.markdown(
+        "<h1 style='font-family:wurthfont; color:#000000;'>Sales & Gross Profit Thermometer Dashboard</h1>",
+        unsafe_allow_html=True
+    )
     st.markdown("---")
     
-    # File uploader
+    # File uploader with custom font and color (wurthfont, #000000) applied via inline style, avoiding <span>
+    st.markdown(
+        "<div style='font-family:wurthfont; color:#000000; font-size:18px; font-weight:bold;'>"
+        "Upload your Excel file with daily data (tab 1) and goals (tab 2)"
+        "</div>",
+        unsafe_allow_html=True
+    )
     uploaded_file = st.file_uploader(
-        "Upload your Excel file with daily data (tab 1) and goals (tab 2)", 
+        label="",  # Hide default label
         type=['xlsx', 'xls']
     )
     
@@ -373,14 +397,30 @@ def main():
             # Get unique companies
             companies = df['Company'].unique()
             
-            # Sidebar for controls
-            st.sidebar.header("Dashboard Controls")
+            # Sidebar for controls with wurthfont and black color
+            st.sidebar.markdown(
+                "<div style='font-family:wurthfont; color:#000000; font-size:20px; font-weight:bold;'>Dashboard Controls</div>",
+                unsafe_allow_html=True
+            )
             
-            # Total days in month
-            total_days = st.sidebar.number_input("Total Days in Month", value=31, min_value=1, max_value=31)
+            # Total days in month with wurthfont and black color
+            st.sidebar.markdown(
+                "<div style='font-family:wurthfont; color:#000000; font-size:16px; font-weight:bold;'>Total Days in Month</div>",
+                unsafe_allow_html=True
+            )
+            total_days = st.sidebar.number_input(
+                label="",
+                value=31,
+                min_value=1,
+                max_value=31,
+                key="total_days_input"
+            )
             
             # Display summary stats
-            st.subheader(f"📊 Summary Statistics")
+            st.markdown(
+                "<h3 style='font-family:wurthfont; color:#000000; font-weight:bold;'>📊 Summary Statistics</h3>",
+                unsafe_allow_html=True
+            )
             col1, col2, col3, col4 = st.columns(4)
             
             total_sales = df['Sales'].sum()
@@ -389,18 +429,37 @@ def main():
             days_elapsed = len(df['Day'].unique())
             
             with col1:
-                st.metric("Total Sales", f"${total_sales:,.0f}")
+                st.markdown(
+                    f"<div style='font-family:wurthfont; color:#000000; font-size:18px;'>Total Sales</div>",
+                    unsafe_allow_html=True
+                )
+                st.metric("", f"${total_sales:,.0f}")
             with col2:
-                st.metric("Total Gross Profit", f"${total_gross_profit:,.0f}")
+                st.markdown(
+                    f"<div style='font-family:wurthfont; color:#000000; font-size:18px;'>Total Gross Profit</div>",
+                    unsafe_allow_html=True
+                )
+                st.metric("", f"${total_gross_profit:,.0f}")
             with col3:
-                st.metric("Total Sales Goal (105%)", f"${total_sales_goal:,.0f}")
+                st.markdown(
+                    f"<div style='font-family:wurthfont; color:#000000; font-size:18px;'>Total Sales Goal (105%)</div>",
+                    unsafe_allow_html=True
+                )
+                st.metric("", f"${total_sales_goal:,.0f}")
             with col4:
-                st.metric("Days Elapsed", days_elapsed)
+                st.markdown(
+                    f"<div style='font-family:wurthfont; color:#000000; font-size:18px;'>Days Elapsed</div>",
+                    unsafe_allow_html=True
+                )
+                st.metric("", days_elapsed)
             
             st.markdown("---")
             
             # Create thermometers
-            st.subheader("💰 Sales Thermometers")
+            st.markdown(
+                "<h4 style='font-family:wurthfont; color:#000000;'>💰 Sales Thermometers</h4>",
+                unsafe_allow_html=True
+            )
             cols = st.columns(4)  # 4 thermometers per row
 
             for i, company in enumerate(companies):
@@ -421,7 +480,10 @@ def main():
 
             
             st.markdown("---")
-            st.subheader("📈 Gross Profit Thermometers")
+            st.markdown(
+                "<h4 style='font-family:wurthfont; color:#000000;'>📈 Gross Profit Thermometers</h4>",
+                unsafe_allow_html=True
+            )
             cols = st.columns(4)  # 4 thermometers per row
 
             for i, company in enumerate(companies):
@@ -441,10 +503,20 @@ def main():
                     cols = st.columns(4)
 
         else:
-            st.error("Failed to load data. Please check your Excel file format.")
+            st.markdown(
+                "<div style='font-family:wurthfont; color:#000000; font-size:18px; font-weight:bold;'>"
+                "Failed to load data. Please check your Excel file format."
+                "</div>",
+                unsafe_allow_html=True
+            )
     
     else:
-        st.info("👆 Please upload your Excel file to get started!")
+        st.markdown(
+            "<div style='font-family:wurthfont; color:#000000; font-size:18px;'>"
+            "👆 Please upload your Excel file to get started!"
+            "</div>",
+            unsafe_allow_html=True
+        )
 
 if __name__ == "__main__":
     main()
