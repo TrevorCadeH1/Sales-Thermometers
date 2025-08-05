@@ -115,17 +115,16 @@ def load_data(file_path):
             return None, None
         
         # Merge with goals data
-        # Create a mapping of company names to goals
+        # Always use the 105% columns for goals
         goals_dict = {}
         for _, row in goals_df.iterrows():
             company = row['Company']
-            sales_goal = row.get('Sales Goal', row.get('105% Sales', 0))
-            gp_goal = row.get('GP$ Goal', row.get('105% GP', 0))
+            sales_goal = row.get('105% Sales', 0)
+            gp_goal = row.get('105% GP', 0)
             goals_dict[company] = {
                 'Sales_Goal': sales_goal,
                 'GP_Goal': gp_goal
             }
-        
         # Add goals to the main dataframe
         df['Sales_Goal'] = df['Company'].map(lambda x: goals_dict.get(x, {}).get('Sales_Goal', 0))
         df['GP_Goal'] = df['Company'].map(lambda x: goals_dict.get(x, {}).get('GP_Goal', 0))
@@ -299,7 +298,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         arrowwidth=2,
         ax=-30,
         ay=0,
-        font=dict(size=10, color='#007bff'),
+        font=dict(size=12, color='#007bff'),
         xanchor='right',
         yanchor='middle'
     )
