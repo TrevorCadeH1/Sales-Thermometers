@@ -31,9 +31,19 @@ st.markdown(
         font-family: 'wurthfont';
         color: #000000 !important;
     }}
-    </style>
+    /* Hide the sidebar tooltip */
+    [data-testid="stSidebarCollapseButton"] {{
+        display: none !important;
+    }}
+    .stSidebar [title*="keyboard_double_arrow_right"] {{
+        display: none !important;
+    }}
+    button[title*="keyboard_double_arrow_right"] {{
+        display: none !important;
+    }}
+    </style> 
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True 
 )
 
 @st.cache_data
