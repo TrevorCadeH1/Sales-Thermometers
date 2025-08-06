@@ -437,27 +437,22 @@ def main():
                 unsafe_allow_html=True
             )
             
-            # Total days in month
+            # Total days in month for each company
             st.sidebar.markdown(
                 "<div style='font-size:16px;'>Total Days in Month</div>",
                 unsafe_allow_html=True
             )
-            # Custom CSS to style the number input buttons on hover
-            st.markdown(
-                """
-                <style>
-                /* Target the number input stepper buttons in Streamlit sidebar */
-                [data-testid="stNumberInput"] button:hover {
-                    background-color: #CC0000 !important; /* Wurth red */
-                    color: #fff !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-            total_days = st.sidebar.number_input(
-                "", value=22, min_value=1, max_value=31, key="total_days_input"
-            )
+            
+            # Create a dictionary to store total days for each company
+            company_total_days = {}
+            for company in companies:
+                company_total_days[company] = st.sidebar.number_input(
+                    f"{company}:", 
+                    value=22, 
+                    min_value=1, 
+                    max_value=31, 
+                    key=f"total_days_input_{company}"
+                )
             
             # Display summary stats
             st.markdown(
@@ -468,11 +463,6 @@ def main():
             
             total_sales = df['Sales'].sum()
             total_gross_profit = df['Gross_Profit'].sum()
-            # Get total sales goal from cell B10 (row 9, column 1) of the second tab
-            try:
-                total_sales_goal = pd.read_excel(uploaded_file, sheet_name=1, header=None).iloc[9, 1]
-            except Exception:
-                total_sales_goal = 0
             days_elapsed = len(df['Day'].unique())
             
             with col1:
@@ -492,7 +482,13 @@ def main():
                     f"<div style='font-size:18px;'>Total Sales Goal (105%)</div>",
                     unsafe_allow_html=True
                 )
-                st.metric("", f"${total_sales_goal:,.0f}")
+                # Get total sales goal from cell B10 (row 9, col 1) of second tab
+                try:
+                    total_sales_goal_cell = pd.read_excel(uploaded_file, sheet_name=1, header=None).iloc[9, 1]
+                    total_sales_goal_value = total_sales_goal_cell if pd.notna(total_sales_goal_cell) else 0
+                except Exception:
+                    total_sales_goal_value = 0
+                st.metric("", f"${total_sales_goal_value:,.0f}")
             with col4:
                 st.markdown(
                     f"<div style='font-size:18px;'>Days Elapsed</div>",
@@ -517,7 +513,7 @@ def main():
                         company_data,
                         company,
                         "Sales",
-                        total_days,
+                        company_total_days[company],
                         month_name_A11
                     )
                     st.plotly_chart(fig, use_container_width=True)
@@ -542,7 +538,7 @@ def main():
                         company_data,
                         company,
                         "Gross Profit",
-                        total_days,
+                        company_total_days[company],
                         month_name_A11
                     )
                     st.plotly_chart(fig, use_container_width=True)
