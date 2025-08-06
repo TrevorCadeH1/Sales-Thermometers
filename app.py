@@ -201,7 +201,6 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
     # Calculate bulb position and tube start
     bulb_center_y = 10
-    bulb_radius = 0  # Approximate radius based on size=150
     tube_start_y = 23.5  # Top of the bulb
     tube_height = 100 - tube_start_y  # Available tube height for 100%
 
@@ -248,7 +247,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     fig.add_annotation(
         x=0.25,
         y=green_top_y,
-        text=f"<b>${yesterday_value:,.0f}</b>",
+        text=f"<b>${yesterday_value:,.0f}</b> <br>",
         showarrow=True,
         arrowhead=2,
         arrowcolor='#008448',
@@ -256,6 +255,17 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         ax=60,
         ay=0,
         font=dict(size=14, color='#008448', family="wurthfont")
+    )
+    # Annotation for per day needed for Goal
+    per_day_needed = (monthly_target - current_total) / max(1, total_days - current_day)
+    fig.add_annotation(
+        x=0.3,
+        y=green_top_y - 2,
+        text=f"<span style='color:#0093DD;'><b>NEEDED <br> ${per_day_needed:,.0f} / DAY</b></span>",
+        showarrow=False,
+        font=dict(size=12, color='#0093DD', family="wurthfont"),
+        xanchor='left',
+        yanchor='top'
     )
 
     # Large red bulb at bottom
@@ -274,9 +284,9 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
     # Add current metric and total inside the bulb (red circle)
     if metric_type == 'Sales':
-        bulb_label = f"Current Sales<br><span style='font-size:16px;'>${current_total:,.0f}</span>"
+        bulb_label = f"Current<br><span style='font-size:16px;'>${current_total:,.0f}</span>"
     else:
-        bulb_label = f"Current GP<br><span style='font-size:16px;'>${current_total:,.0f}</span>"
+        bulb_label = f"Current<br><span style='font-size:16px;'>${current_total:,.0f}</span>"
     fig.add_annotation(
         x=0,
         y=bulb_center_y,
@@ -290,15 +300,14 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
     # Add "X out of Y Days" text (bold)
     fig.add_annotation(
-        x=0.35,
+        x=-0.25,
         y=bulb_center_y,
         text=f"<b>{current_day} out of<br>{total_days} Days</b>",
         showarrow=False,
         font=dict(size=16, color='#000000', family="wurthfont"),
-        xanchor='left',
+        xanchor='right',
         yanchor='middle',
-        align='left',
-        # Plotly will render <b> as bold in annotation text
+        align='right',
     )
 
     # Draw left side of tube
@@ -335,7 +344,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         fig.add_annotation(
             x=-0.15,  # Keep text to the left
             y=expected_percent,
-            text=f"<b>100% Pace<br>{current_day} days in<br>${(monthly_target - current_total) / max(1, total_days - current_day):,.0f} <br> per day needed<br> for Goal",
+            text=f"<b>100% Pace",
             showarrow=True,
             arrowhead=2,
             arrowcolor='#0093DD',
@@ -389,9 +398,11 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     # Layout
     # Use the provided month_name if available, else fallback
     title_month = month_name if month_name else 'Current Month'
+    # Determine metric label for the title
+    metric_label = "Sales" if metric_type == "Sales" else "GP"
     fig.update_layout(
         title=dict(
-            text=f"<b>{company_name} {title_month} Goal:<br> <span style='color:#0093DD;'>${monthly_target:,.0f}</span></b>",
+            text=f"<b>{company_name} {title_month} {metric_label} Goal:<br> <span style='color:#0093DD;'>${monthly_target:,.0f}</span></b>",
             x=0.42,
             xanchor='center',
             yanchor='top',
@@ -435,7 +446,7 @@ def main():
     
     if uploaded_file is not None:
         # Load data
-        df, goals_df, month_name_A11 = load_data(uploaded_file)
+        df, goals_df, month_name_A13 = load_data(uploaded_file)
         
         if df is not None and goals_df is not None:
             # Get unique companies
@@ -524,7 +535,7 @@ def main():
                         company,
                         "Sales",
                         company_total_days[company],
-                        month_name_A11
+                        month_name_A13
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 
@@ -549,7 +560,7 @@ def main():
                         company,
                         "Gross Profit",
                         company_total_days[company],
-                        month_name_A11
+                        month_name_A13
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 
