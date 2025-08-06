@@ -309,7 +309,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         arrowhead=2,
         arrowcolor='#008448',
         arrowwidth=2,
-        ax=60,
+        ax=55,
         ay=0,
         font=dict(size=14, color='#008448', family=font_family)
     )
