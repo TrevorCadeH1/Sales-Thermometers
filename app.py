@@ -90,9 +90,9 @@ def load_data(file_path):
         
         # Read goal data from second tab
         goals_df = pd.read_excel(file_path, sheet_name=1)
-        # Extract month from cell A11 (row 10, col 0) of second tab
+        # Extract month from cell A13 (row 12, col 0) of second tab
         try:
-            month_cell = pd.read_excel(file_path, sheet_name=1, header=None).iloc[10, 0]
+            month_cell = pd.read_excel(file_path, sheet_name=1, header=None).iloc[12, 0]
             month_name_from_excel = str(month_cell) if pd.notna(month_cell) else None
         except Exception:
             month_name_from_excel = None
@@ -323,7 +323,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
         # Target pace annotation - bring arrow and text closer together
         fig.add_annotation(
-            x=-0.16,  # Keep text to the left
+            x=-0.15,  # Keep text to the left
             y=expected_percent,
             text=f"<b>100% Pace<br>{current_day} days in<br>${(monthly_target - current_total) / max(1, total_days - current_day):,.0f} <br> per day needed<br> for Goal",
             showarrow=True,
@@ -332,7 +332,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
             arrowwidth=2,
             ax=-20,   # Less negative: shorter arrow, brings text closer
             ay=0,
-            font=dict(size=13, color='#0093DD', family="wurthfont"),
+            font=dict(size=12, color='#0093DD', family="wurthfont"),
             xanchor='right',
             yanchor='middle'
         )
