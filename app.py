@@ -316,7 +316,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     # Annotation for per day needed for Goal
     per_day_needed = (monthly_target - current_total) / max(1, total_days - current_day)
     fig.add_annotation(
-        x=0.26,
+        x=0.25,
         y=green_top_y - 2,
         text=(
             f"<span style='color:#0093DD;'>"
