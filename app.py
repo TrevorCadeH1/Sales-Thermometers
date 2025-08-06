@@ -492,9 +492,9 @@ def main():
                     f"<div style='font-size:18px;'>Total Sales Goal (105%)</div>",
                     unsafe_allow_html=True
                 )
-                # Get total sales goal from cell B10 (row 9, col 1) of second tab
+                # Get total sales goal from cell B10 (row 9, col 3) of second tab
                 try:
-                    total_sales_goal_cell = pd.read_excel(uploaded_file, sheet_name=1, header=None).iloc[9, 1]
+                    total_sales_goal_cell = pd.read_excel(uploaded_file, sheet_name=1, header=None).iloc[9, 3]
                     total_sales_goal_value = total_sales_goal_cell if pd.notna(total_sales_goal_cell) else 0
                 except Exception:
                     total_sales_goal_value = 0
