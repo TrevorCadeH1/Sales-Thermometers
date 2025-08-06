@@ -5,6 +5,48 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
 from datetime import datetime
+import plotly.io as pio
+import os
+
+# Register the custom font for Plotly image exports
+def register_font_for_plotly():
+    """Register the wurthfont.ttf for use in Plotly image exports"""
+    try:
+        # Get the absolute path to the font file
+        font_path = os.path.abspath("fonts/wurthfont.ttf")
+        
+        # Check if font file exists
+        if os.path.exists(font_path):
+            # Configure Plotly for better font support
+            pio.kaleido.scope.default_format = "png"
+            pio.kaleido.scope.default_engine = "kaleido"
+            
+            # Set a more compatible default template
+            pio.templates.default = "plotly_white"
+            
+            # Try to copy font to system accessible location
+            import tempfile
+            import shutil
+            temp_dir = tempfile.gettempdir()
+            temp_font_path = os.path.join(temp_dir, "wurthfont.ttf")
+            
+            try:
+                if not os.path.exists(temp_font_path):
+                    shutil.copy2(font_path, temp_font_path)
+                    print(f"Font copied to temp directory: {temp_font_path}")
+            except Exception as copy_error:
+                print(f"Could not copy font to temp directory: {copy_error}")
+            
+            return True
+        else:
+            print(f"Font file not found at: {font_path}")
+            return False
+    except Exception as e:
+        print(f"Error registering font: {e}")
+        return False
+
+# Register the font
+font_registered = register_font_for_plotly()
 
 # Set page config
 st.set_page_config(
@@ -14,9 +56,21 @@ st.set_page_config(
 )
 
 # Embed wurthfont.ttf as base64 in the CSS so it works in Streamlit
-with open("fonts/wurthfont.ttf", "rb") as f:
-    font_data = f.read()
-font_base64 = base64.b64encode(font_data).decode()
+try:
+    with open("fonts/wurthfont.ttf", "rb") as f:
+        font_data = f.read()
+    font_base64 = base64.b64encode(font_data).decode()
+    
+    # Also try to copy font to system temp directory for Plotly access
+    import tempfile
+    import shutil
+    temp_font_path = os.path.join(tempfile.gettempdir(), "wurthfont.ttf")
+    if not os.path.exists(temp_font_path):
+        shutil.copy2("fonts/wurthfont.ttf", temp_font_path)
+        
+except Exception as e:
+    st.error(f"Error loading font: {e}")
+    font_base64 = ""
 
 st.markdown(
     f"""
@@ -184,6 +238,9 @@ def calculate_daily_target(monthly_target, total_days, current_day):
     return daily_average * current_day
 
 def create_thermometer(company_data, company_name, metric_type="Sales", total_days=22, month_name=None):
+    # Define font family with fallbacks for better compatibility
+    font_family = "wurthfont, Arial Black, Arial, sans-serif"
+    
     # Get the goal from the data (goals are already 105% targets)
     if metric_type == "Sales":
         monthly_target = company_data['Sales_Goal'].iloc[0] if len(company_data) > 0 else 0
@@ -240,7 +297,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         y=green_top_y + 2,  # Position "YESTERDAY" label above the number
         text="<b>YESTERDAY</b>",
         showarrow=False,
-        font=dict(size=12, color='#008448', family="wurthfont"),
+        font=dict(size=12, color='#008448', family=font_family),
         xanchor='left',
         yanchor='bottom'
     )
@@ -254,16 +311,21 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         arrowwidth=2,
         ax=60,
         ay=0,
-        font=dict(size=14, color='#008448', family="wurthfont")
+        font=dict(size=14, color='#008448', family=font_family)
     )
     # Annotation for per day needed for Goal
     per_day_needed = (monthly_target - current_total) / max(1, total_days - current_day)
     fig.add_annotation(
-        x=0.3,
+        x=0.26,
         y=green_top_y - 2,
-        text=f"<span style='color:#0093DD;'><b>NEEDED <br> ${per_day_needed:,.0f} / DAY</b></span>",
+        text=(
+            f"<span style='color:#0093DD;'>"
+            f"<b>NEEDED <br> "
+            f"<span style='font-size:14px;'>${per_day_needed:,.0f} / DAY</span>"
+            f"</b></span>"
+        ),
         showarrow=False,
-        font=dict(size=12, color='#0093DD', family="wurthfont"),
+        font=dict(size=12, color='#0093DD', family=font_family),
         xanchor='left',
         yanchor='top'
     )
@@ -292,7 +354,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         y=bulb_center_y,
         text=bulb_label,
         showarrow=False,
-        font=dict(size=14, color='white', family="wurthfont"),
+        font=dict(size=14, color='white', family=font_family),
         xanchor='center',
         yanchor='middle',
         align='center',
@@ -304,7 +366,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         y=bulb_center_y,
         text=f"<b>{current_day} out of<br>{total_days} Days</b>",
         showarrow=False,
-        font=dict(size=16, color='#000000', family="wurthfont"),
+        font=dict(size=16, color='#000000', family=font_family),
         xanchor='right',
         yanchor='middle',
         align='right',
@@ -351,7 +413,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
             arrowwidth=2,
             ax=-20,   # Less negative: shorter arrow, brings text closer
             ay=0,
-            font=dict(size=12, color='#0093DD', family="wurthfont"),
+            font=dict(size=12, color='#0093DD', family=font_family),
             xanchor='right',
             yanchor='middle'
         )
@@ -363,7 +425,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
             y=tube_start_y + tube_height - 4,
             text=f"<b><span style='color:#0093DD;font-size:14px'>Percent of Goal: <br></span><span style='color:#0093DD;font-size:18px'>{percent:.0f}%      </span></b>",
             showarrow=False,
-            font=dict(size=22, color='#0093DD', family="wurthfont"),
+            font=dict(size=22, color='#0093DD', family=font_family),
             xanchor='right',
             yanchor='middle',
             align='right',
@@ -389,7 +451,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
                 y=tube_position,
                 text=f"{pct}%",
                 showarrow=False,
-                font=dict(size=10, color='#000000', family="wurthfont"),
+                font=dict(size=10, color='#000000', family=font_family),
                 xanchor='left',
                 yanchor='middle'
             )
@@ -406,7 +468,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
             x=0.42,
             xanchor='center',
             yanchor='top',
-            font=dict(size=20, family="wurthfont", color='#000000', weight="bold")
+            font=dict(size=20, family=font_family, color='#000000', weight="bold")
         ),
         yaxis=dict(range=[-10, tube_start_y + tube_height + 4], showgrid=False, showticklabels=False, zeroline=False),
         xaxis=dict(showticklabels=False, range=[-0.4, 0.6]),
@@ -419,7 +481,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         paper_bgcolor='white'
     )
     # Enable HTML in the title
-    fig.update_layout(title_font_color='#000000', title_font_family="wurthfont")
+    fig.update_layout(title_font_color='#000000', title_font_family=font_family)
     fig.update_layout(title={'text': fig.layout.title.text, 'font': fig.layout.title.font, 'x': fig.layout.title.x, 'xanchor': fig.layout.title.xanchor, 'yanchor': fig.layout.title.yanchor})
     fig.layout.title.text = fig.layout.title.text  # Ensures HTML is rendered
 
