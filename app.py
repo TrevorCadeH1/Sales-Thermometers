@@ -434,7 +434,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     # Percentage tick marks and labels - only within tube area
     for pct in range(10, 110, 10):  # start at 10 instead of 0
         tube_position = tube_start_y + (pct / 100.0) * tube_height
-
+            
         if tube_position <= 100:
             # Tick line
             fig.add_shape(
@@ -539,7 +539,7 @@ def main():
             
             # Display summary stats
             st.markdown(
-                "<h3 style='font-weight:bold;'>📊 Summary Statistics</h3>",
+                "<h3 style='font-weight:bold;'>Summary Statistics</h3>",
                 unsafe_allow_html=True
             )
             col1, col2, col3, col4 = st.columns(4)
@@ -565,7 +565,7 @@ def main():
                     f"<div style='font-size:18px;'>Total Sales Goal (105%)</div>",
                     unsafe_allow_html=True
                 )
-                # Get total sales goal from cell B10 (row 9, col 3) of second tab
+                # Get total sales goal from cell D10 (row 9, col 3) of second tab
                 try:
                     total_sales_goal_cell = pd.read_excel(uploaded_file, sheet_name=1, header=None).iloc[9, 3]
                     total_sales_goal_value = total_sales_goal_cell if pd.notna(total_sales_goal_cell) else 0
@@ -583,7 +583,7 @@ def main():
             
             # Create thermometers
             st.markdown(
-                "<h4>💰 Sales Thermometers</h4>",
+                "<h4>Sales Thermometers</h4>",
                 unsafe_allow_html=True
             )
             cols = st.columns(4)  # 4 thermometers per row
@@ -608,7 +608,7 @@ def main():
             
             st.markdown("---")
             st.markdown(
-                "<h4>📈 Gross Profit Thermometers</h4>",
+                "<h4>Gross Profit Thermometers</h4>",
                 unsafe_allow_html=True
             )
             cols = st.columns(4)  # 4 thermometers per row
@@ -634,7 +634,7 @@ def main():
             st.error("Failed to load data. Please check your Excel file format.")
     
     else:
-        st.info("👆 Please upload your Excel file to get started!")
+        st.info("Please upload your Excel file to get started!")
 
 if __name__ == "__main__":
     main()
