@@ -302,7 +302,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         yanchor='bottom'
     )
     fig.add_annotation(
-        x=0.25,
+        x=0.26,
         y=green_top_y,
         text=f"<b>${yesterday_value:,.0f}</b> <br>",
         showarrow=True,
