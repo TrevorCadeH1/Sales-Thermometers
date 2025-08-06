@@ -442,8 +442,21 @@ def main():
                 "<div style='font-size:16px;'>Total Days in Month</div>",
                 unsafe_allow_html=True
             )
+            # Custom CSS to style the number input buttons on hover
+            st.markdown(
+                """
+                <style>
+                /* Target the number input stepper buttons in Streamlit sidebar */
+                [data-testid="stNumberInput"] button:hover {
+                    background-color: #CC0000 !important; /* Wurth red */
+                    color: #fff !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
             total_days = st.sidebar.number_input(
-                "", value=22, min_value=1, max_value=22, key="total_days_input"
+                "", value=22, min_value=1, max_value=31, key="total_days_input"
             )
             
             # Display summary stats
@@ -455,7 +468,11 @@ def main():
             
             total_sales = df['Sales'].sum()
             total_gross_profit = df['Gross_Profit'].sum()
-            total_sales_goal = df['Sales_Goal'].sum()
+            # Get total sales goal from cell B10 (row 9, column 1) of the second tab
+            try:
+                total_sales_goal = pd.read_excel(uploaded_file, sheet_name=1, header=None).iloc[9, 1]
+            except Exception:
+                total_sales_goal = 0
             days_elapsed = len(df['Day'].unique())
             
             with col1:
