@@ -266,7 +266,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     if metric_type == 'Sales':
         bulb_label = f"Current Sales<br><span style='font-size:16px;'>${current_total:,.0f}</span>"
     else:
-        bulb_label = f"Current GP<br><span style='font-size:20px;'>${current_total:,.0f}</span>"
+        bulb_label = f"Current GP<br><span style='font-size:16px;'>${current_total:,.0f}</span>"
     fig.add_annotation(
         x=0,
         y=bulb_center_y,
@@ -408,14 +408,14 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
 def main():
     st.markdown(
-        "<h1 style='font-family:wurthfont; color:#000000;'>Sales & Gross Profit Thermometer Dashboard</h1>",
+        "<h1>Sales & Gross Profit Thermometer Dashboard</h1>",
         unsafe_allow_html=True
     )
     st.markdown("---")
     
-    # File uploader with wurthfont and black color
+    # File uploader
     st.markdown(
-        "<div style='font-family:wurthfont; color:#000000; font-size:16px;'>Upload your Excel file with daily data (tab 1) and goals (tab 2)</div>",
+        "<div style='font-size:16px;'>Upload your Excel file with daily data (tab 1) and goals (tab 2)</div>",
         unsafe_allow_html=True
     )
     uploaded_file = st.file_uploader(
@@ -433,22 +433,22 @@ def main():
             
             # Sidebar for controls
             st.sidebar.markdown(
-                "<h2 style='font-family:wurthfont; color:#000000;'>Dashboard Controls</h2>",
+                "<h2>Dashboard Controls</h2>",
                 unsafe_allow_html=True
             )
             
-            # Total days in month (styled with wurthfont and black color)
+            # Total days in month
             st.sidebar.markdown(
-                "<div style='font-family:wurthfont; color:#000000; font-size:16px;'>Total Days in Month</div>",
+                "<div style='font-size:16px;'>Total Days in Month</div>",
                 unsafe_allow_html=True
             )
             total_days = st.sidebar.number_input(
-                "", value=31, min_value=1, max_value=31, key="total_days_input"
+                "", value=22, min_value=1, max_value=22, key="total_days_input"
             )
             
             # Display summary stats
             st.markdown(
-                "<h3 style='font-family:wurthfont; color:#000000; font-weight:bold;'>📊 Summary Statistics</h3>",
+                "<h3 style='font-weight:bold;'>📊 Summary Statistics</h3>",
                 unsafe_allow_html=True
             )
             col1, col2, col3, col4 = st.columns(4)
@@ -460,25 +460,25 @@ def main():
             
             with col1:
                 st.markdown(
-                    f"<div style='font-family:wurthfont; color:#000000; font-size:18px;'>Total Sales</div>",
+                    f"<div style='font-size:18px;'>Total Sales</div>",
                     unsafe_allow_html=True
                 )
                 st.metric("", f"${total_sales:,.0f}")
             with col2:
                 st.markdown(
-                    f"<div style='font-family:wurthfont; color:#000000; font-size:18px;'>Total Gross Profit</div>",
+                    f"<div style='font-size:18px;'>Total Gross Profit</div>",
                     unsafe_allow_html=True
                 )
                 st.metric("", f"${total_gross_profit:,.0f}")
             with col3:
                 st.markdown(
-                    f"<div style='font-family:wurthfont; color:#000000; font-size:18px;'>Total Sales Goal (105%)</div>",
+                    f"<div style='font-size:18px;'>Total Sales Goal (105%)</div>",
                     unsafe_allow_html=True
                 )
                 st.metric("", f"${total_sales_goal:,.0f}")
             with col4:
                 st.markdown(
-                    f"<div style='font-family:wurthfont; color:#000000; font-size:18px;'>Days Elapsed</div>",
+                    f"<div style='font-size:18px;'>Days Elapsed</div>",
                     unsafe_allow_html=True
                 )
                 st.metric("", days_elapsed)
@@ -487,7 +487,7 @@ def main():
             
             # Create thermometers
             st.markdown(
-                "<h4 style='font-family:wurthfont; color:#000000;'>💰 Sales Thermometers</h4>",
+                "<h4>💰 Sales Thermometers</h4>",
                 unsafe_allow_html=True
             )
             cols = st.columns(4)  # 4 thermometers per row
@@ -512,7 +512,7 @@ def main():
             
             st.markdown("---")
             st.markdown(
-                "<h4 style='font-family:wurthfont; color:#000000;'>📈 Gross Profit Thermometers</h4>",
+                "<h4>📈 Gross Profit Thermometers</h4>",
                 unsafe_allow_html=True
             )
             cols = st.columns(4)  # 4 thermometers per row
