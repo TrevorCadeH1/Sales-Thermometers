@@ -1,4 +1,5 @@
 import streamlit as st
+import base64
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -12,20 +13,24 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inject custom font CSS for wurthfont and set all text color to #000000 globally
+# Embed wurthfont.ttf as base64 in the CSS so it works in Streamlit
+with open("fonts/wurthfont.ttf", "rb") as f:
+    font_data = f.read()
+font_base64 = base64.b64encode(font_data).decode()
+
 st.markdown(
-    """
+    f"""
     <style>
-    @font-face {
+    @font-face {{
         font-family: 'wurthfont';
-        src: url('fonts/wurthfont.ttf') format('truetype');
+        src: url(data:font/ttf;base64,{font_base64}) format('truetype');
         font-weight: normal;
         font-style: normal;
-    }
-    html, body, [class^="st-"], [class*=" st-"], .stText, .stMarkdown, .stMetric, .stTitle, .stHeader, .stDataFrame, .stTable, .stSubheader, .stCaption, .stButton, .stRadio, .stSelectbox, .stSidebar, .stNumberInput, .stFileUploader, .stAlert, .stInfo, .stError, .stSuccess, .stWarning {
+    }}
+    html, body, [class^="st-"], [class*=" st-"], .stText, .stMarkdown, .stMetric, .stTitle, .stHeader, .stDataFrame, .stTable, .stSubheader, .stCaption, .stButton, .stRadio, .stSelectbox, .stSidebar, .stNumberInput, .stFileUploader, .stAlert, .stInfo, .stError, .stSuccess, .stWarning {{
         font-family: 'wurthfont';
         color: #000000 !important;
-    }
+    }}
     </style>
     """,
     unsafe_allow_html=True
@@ -85,6 +90,12 @@ def load_data(file_path):
         
         # Read goal data from second tab
         goals_df = pd.read_excel(file_path, sheet_name=1)
+        # Extract month from cell A11 (row 10, col 0) of second tab
+        try:
+            month_cell = pd.read_excel(file_path, sheet_name=1, header=None).iloc[10, 0]
+            month_name_from_excel = str(month_cell) if pd.notna(month_cell) else None
+        except Exception:
+            month_name_from_excel = None
         
         # Process the data into our required format
         processed_data = []
@@ -148,7 +159,7 @@ def load_data(file_path):
         df['Sales_Goal'] = df['Company'].map(lambda x: goals_dict.get(x, {}).get('Sales_Goal', 0))
         df['GP_Goal'] = df['Company'].map(lambda x: goals_dict.get(x, {}).get('GP_Goal', 0))
         
-        return df, goals_df
+        return df, goals_df, month_name_from_excel
     except Exception as e:
         st.error(f"Error loading data: {e}")
         return None, None
@@ -162,7 +173,7 @@ def calculate_daily_target(monthly_target, total_days, current_day):
     daily_average = monthly_target / total_days
     return daily_average * current_day
 
-def create_thermometer(company_data, company_name, metric_type="Sales", total_days=22):
+def create_thermometer(company_data, company_name, metric_type="Sales", total_days=22, month_name=None):
     # Get the goal from the data (goals are already 105% targets)
     if metric_type == "Sales":
         monthly_target = company_data['Sales_Goal'].iloc[0] if len(company_data) > 0 else 0
@@ -184,11 +195,12 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
     tube_start_y = 23.5  # Top of the bulb
     tube_height = 100 - tube_start_y  # Available tube height for 100%
 
-    # Percentages adjusted for tube position
-    previous_days_percent = (previous_days_value / monthly_target) * tube_height
-    yesterday_percent = (yesterday_value / monthly_target) * tube_height
-    total_percent = (current_total / monthly_target) * tube_height
-    expected_percent = (expected_position / monthly_target) * tube_height + tube_start_y
+    # Percentages adjusted for tube position, capped at 100%
+    percent_filled = min(current_total / monthly_target, 1.0) if monthly_target > 0 else 0
+    previous_days_percent = min((previous_days_value / monthly_target) * tube_height, tube_height) if monthly_target > 0 else 0
+    yesterday_percent = min((yesterday_value / monthly_target) * tube_height, tube_height - previous_days_percent) if monthly_target > 0 else 0
+    total_percent = percent_filled * tube_height
+    expected_percent = (expected_position / monthly_target) * tube_height + tube_start_y if monthly_target > 0 else tube_start_y
 
     fig = go.Figure()
 
@@ -250,16 +262,20 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         showlegend=False
     ))
 
-    # Add company name and metric type inside the bulb (larger font, bold, centered)
-    bulb_label = f"<b>{company_name.upper()}<br>{'SALES' if metric_type == 'Sales' else 'GP'}</b>"
+    # Add current metric and total inside the bulb (red circle)
+    if metric_type == 'Sales':
+        bulb_label = f"Current Sales<br><span style='font-size:16px;'>${current_total:,.0f}</span>"
+    else:
+        bulb_label = f"Current GP<br><span style='font-size:20px;'>${current_total:,.0f}</span>"
     fig.add_annotation(
         x=0,
         y=bulb_center_y,
         text=bulb_label,
         showarrow=False,
-        font=dict(size=16, color='white', family="wurthfont"),
+        font=dict(size=14, color='white', family="wurthfont"),
         xanchor='center',
-        yanchor='middle'
+        yanchor='middle',
+        align='center',
     )
 
     # Add "X out of Y Days" text (bold)
@@ -295,33 +311,44 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         line=dict(color='#000000', width=1)
     )
 
-    # Target pace line (blue horizontal line) - positioned correctly within tube
-    fig.add_shape(
-        type="line",
-        x0=-0.15, x1=0.15,
-        y0=expected_percent,
-        y1=expected_percent,
-        line=dict(color='#0093DD', width=3)
-    )
+    if current_total < monthly_target:
+        # Target pace line (blue horizontal line) - positioned correctly within tube
+        fig.add_shape(
+            type="line",
+            x0=-0.15, x1=0.15,
+            y0=expected_percent,
+            y1=expected_percent,
+            line=dict(color='#0093DD', width=3)
+        )
 
-    # Recalculate total_percent to account for tube starting position
-    total_percent_adjusted = total_percent + tube_start_y
-
-    # Target pace annotation - bring arrow and text closer together
-    fig.add_annotation(
-        x=-0.17,  # Keep text to the left
-        y=expected_percent,
-        text=f"<b>100% Pace<br>{current_day} days in<br>${(monthly_target - current_total) / max(1, total_days - current_day):,.0f} <br> per day needed<br> for Goal",
-        showarrow=True,
-        arrowhead=2,
-        arrowcolor='#0093DD',
-        arrowwidth=2,
-        ax=-20,   # Less negative: shorter arrow, brings text closer
-        ay=0,
-        font=dict(size=13, color='#0093DD', family="wurthfont"),
-        xanchor='right',
-        yanchor='middle'
-    )
+        # Target pace annotation - bring arrow and text closer together
+        fig.add_annotation(
+            x=-0.16,  # Keep text to the left
+            y=expected_percent,
+            text=f"<b>100% Pace<br>{current_day} days in<br>${(monthly_target - current_total) / max(1, total_days - current_day):,.0f} <br> per day needed<br> for Goal",
+            showarrow=True,
+            arrowhead=2,
+            arrowcolor='#0093DD',
+            arrowwidth=2,
+            ax=-20,   # Less negative: shorter arrow, brings text closer
+            ay=0,
+            font=dict(size=13, color='#0093DD', family="wurthfont"),
+            xanchor='right',
+            yanchor='middle'
+        )
+    else:
+        # Show blue percent annotation to the left of the top of the tube
+        percent = (current_total / monthly_target) * 100 if monthly_target > 0 else 0
+        fig.add_annotation(
+            x=-0.16,  # Shifted right from -0.22 to -0.12
+            y=tube_start_y + tube_height - 4,
+            text=f"<b><span style='color:#0093DD;font-size:14px'>Percent of Goal: <br></span><span style='color:#0093DD;font-size:18px'>{percent:.0f}%      </span></b>",
+            showarrow=False,
+            font=dict(size=22, color='#0093DD', family="wurthfont"),
+            xanchor='right',
+            yanchor='middle',
+            align='right',
+        )
 
     # Percentage tick marks and labels - only within tube area
     for pct in range(10, 110, 10):  # start at 10 instead of 0
@@ -350,15 +377,15 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
 
     # Layout
-    # Get month name for title - removed date dependency
-    month_name = 'Current Month'
+    # Use the provided month_name if available, else fallback
+    title_month = month_name if month_name else 'Current Month'
     fig.update_layout(
         title=dict(
-            text=f"Monthly Goal:<br>${current_total:,.0f} / ${monthly_target:,.0f}",
+            text=f"<b>{company_name} {title_month} Goal:<br> <span style='color:#0093DD;'>${monthly_target:,.0f}</span></b>",
             x=0.42,
             xanchor='center',
             yanchor='top',
-            font=dict(size=16, family="wurthfont", color='#000000')
+            font=dict(size=20, family="wurthfont", color='#000000', weight="bold")
         ),
         yaxis=dict(range=[-10, tube_start_y + tube_height + 4], showgrid=False, showticklabels=False, zeroline=False),
         xaxis=dict(showticklabels=False, range=[-0.4, 0.6]),
@@ -370,6 +397,10 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         plot_bgcolor='white',
         paper_bgcolor='white'
     )
+    # Enable HTML in the title
+    fig.update_layout(title_font_color='#000000', title_font_family="wurthfont")
+    fig.update_layout(title={'text': fig.layout.title.text, 'font': fig.layout.title.font, 'x': fig.layout.title.x, 'xanchor': fig.layout.title.xanchor, 'yanchor': fig.layout.title.yanchor})
+    fig.layout.title.text = fig.layout.title.text  # Ensures HTML is rendered
 
     return fig
 
@@ -394,7 +425,7 @@ def main():
     
     if uploaded_file is not None:
         # Load data
-        df, goals_df = load_data(uploaded_file)
+        df, goals_df, month_name_A11 = load_data(uploaded_file)
         
         if df is not None and goals_df is not None:
             # Get unique companies
@@ -466,10 +497,11 @@ def main():
                 
                 with cols[i % 4]:
                     fig = create_thermometer(
-                        company_data, 
-                        company, 
-                        "Sales", 
-                        total_days
+                        company_data,
+                        company,
+                        "Sales",
+                        total_days,
+                        month_name_A11
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 
@@ -490,10 +522,11 @@ def main():
                 
                 with cols[i % 4]:
                     fig = create_thermometer(
-                        company_data, 
-                        company, 
-                        "Gross Profit", 
-                        total_days
+                        company_data,
+                        company,
+                        "Gross Profit",
+                        total_days,
+                        month_name_A11
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 
