@@ -768,7 +768,10 @@ def main():
         st.error('Username/password is incorrect')
     elif authentication_status:
         # User is authenticated - show their company's dashboard
-        authenticator.logout('Logout', 'main')
+        # Move Logout button to the right side of the screen using columns
+        col_right, col_right = st.columns([8, 1])
+        with col_right:
+            authenticator.logout('Logout', 'main')
         user_company = company_map.get(username)
         
         # Special handling for WLCNA - show all companies
