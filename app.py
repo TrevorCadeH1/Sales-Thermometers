@@ -19,6 +19,32 @@ except ImportError:
     SHOW_LAST_MODIFIED = True
     ENABLE_UPDATE_NOTIFICATIONS = True
 
+# Function to find the Excel file in multiple locations
+def find_excel_file():
+    """Find the Excel file in various possible locations"""
+    # Check for OneDrive URL in environment variable (for deployment)
+    onedrive_url = os.environ.get('ONEDRIVE_EXCEL_URL')
+    if onedrive_url:
+        return onedrive_url
+    
+    # Local file paths for development
+    possible_paths = [
+        EXCEL_FILE_PATH,  # Original config path
+        "SalesThermometerDashboard 1.xlsx",  # In repository root
+        "data/SalesThermometerDashboard 1.xlsx",  # In data folder
+        "SalesThermometerDashboard.xlsx",  # Alternative name
+        "data/SalesThermometerDashboard.xlsx",  # Alternative in data folder
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None
+
+# Set the actual Excel file path
+ACTUAL_EXCEL_PATH = find_excel_file()
+
 # Register the custom font for Plotly image exports
 def register_font_for_plotly():
     """Register the wurthfont.ttf for use in Plotly image exports"""
@@ -78,10 +104,28 @@ def get_file_modified_time(file_path):
 
 def check_file_update():
     """Check if the Excel file has been updated and clear cache if needed"""
-    if not os.path.exists(EXCEL_FILE_PATH):
+    if not ACTUAL_EXCEL_PATH:
         return False
     
-    current_modified = get_file_modified_time(EXCEL_FILE_PATH)
+    # If it's a URL, we can't check modification time, so refresh periodically
+    is_url = ACTUAL_EXCEL_PATH.startswith('http://') or ACTUAL_EXCEL_PATH.startswith('https://')
+    if is_url:
+        # For URLs, refresh every 30 seconds
+        if 'last_url_refresh' not in st.session_state:
+            st.session_state.last_url_refresh = time.time()
+            return True
+        
+        if time.time() - st.session_state.last_url_refresh > 30:  # 30 seconds
+            st.session_state.last_url_refresh = time.time()
+            st.cache_data.clear()
+            return True
+        return False
+    
+    # For local files, check modification time
+    if not os.path.exists(ACTUAL_EXCEL_PATH):
+        return False
+    
+    current_modified = get_file_modified_time(ACTUAL_EXCEL_PATH)
     
     if current_modified is None:
         return False
@@ -211,9 +255,12 @@ st.markdown(
 
 @st.cache_data
 def load_data_from_file(file_path, file_modified_time):
-    """Load and process the Excel data from file path with file modification time as cache key"""
+    """Load and process the Excel data from file path or URL with file modification time as cache key"""
     try:
-        if not os.path.exists(file_path):
+        # Check if it's a URL or local file
+        is_url = file_path.startswith('http://') or file_path.startswith('https://')
+        
+        if not is_url and not os.path.exists(file_path):
             st.error(f"Excel file not found at: {file_path}")
             return None, None, None
             
@@ -796,13 +843,19 @@ def main():
                 check_file_update()  # This will clear cache if file was updated
                 st.session_state.refresh_timer = time.time()
                 st.rerun()
-            
             st.markdown("---")
             
-            # Load data from fixed file path
-            if os.path.exists(EXCEL_FILE_PATH):
-                file_modified_time = get_file_modified_time(EXCEL_FILE_PATH)
-                df, goals_df, month_name_A13 = load_data_from_file(EXCEL_FILE_PATH, file_modified_time)
+            # Load data from fixed file path or URL
+            if ACTUAL_EXCEL_PATH:
+                is_url = ACTUAL_EXCEL_PATH.startswith('http://') or ACTUAL_EXCEL_PATH.startswith('https://')
+                if is_url or os.path.exists(ACTUAL_EXCEL_PATH):
+                    # For URLs, use current timestamp as cache key; for files, use modification time
+                    if is_url:
+                        cache_key = int(time.time() // 30)  # Refresh every 30 seconds
+                    else:
+                        cache_key = get_file_modified_time(ACTUAL_EXCEL_PATH)
+                    
+                    df, goals_df, month_name_A13 = load_data_from_file(ACTUAL_EXCEL_PATH, cache_key)
                 
                 if df is not None and goals_df is not None:
                     # Get all companies from the data
@@ -949,10 +1002,17 @@ def main():
             
             st.markdown("---")
             
-            # Load data from fixed file path
-            if os.path.exists(EXCEL_FILE_PATH):
-                file_modified_time = get_file_modified_time(EXCEL_FILE_PATH)
-                df, goals_df, month_name_A13 = load_data_from_file(EXCEL_FILE_PATH, file_modified_time)
+            # Load data from fixed file path or URL
+            if ACTUAL_EXCEL_PATH:
+                is_url = ACTUAL_EXCEL_PATH.startswith('http://') or ACTUAL_EXCEL_PATH.startswith('https://')
+                if is_url or os.path.exists(ACTUAL_EXCEL_PATH):
+                    # For URLs, use current timestamp as cache key; for files, use modification time
+                    if is_url:
+                        cache_key = int(time.time() // 30)  # Refresh every 30 seconds
+                    else:
+                        cache_key = get_file_modified_time(ACTUAL_EXCEL_PATH)
+                    
+                    df, goals_df, month_name_A13 = load_data_from_file(ACTUAL_EXCEL_PATH, cache_key)
                 
                 if df is not None and goals_df is not None:
                     # Filter data for only the authenticated user's company
@@ -1083,7 +1143,11 @@ def main():
                 else:
                     st.error("Failed to load data. Please check your Excel file format.")
             else:
-                st.error(f"Excel file not found at: `{EXCEL_FILE_PATH}`")
-                st.info("Please update the `EXCEL_FILE_PATH` variable in the code to point to your Excel file.")
+                if not ACTUAL_EXCEL_PATH:
+                    st.error("Excel file not found. Please ensure your Excel file is uploaded to the repository or accessible to the app.")
+                    st.info("Tried looking for: SalesThermometerDashboard 1.xlsx, SalesThermometerDashboard.xlsx in root and data/ folder")
+                else:
+                    st.error(f"Excel file not found at: `{ACTUAL_EXCEL_PATH}`")
+                    st.info("Please check that the file exists and is accessible.")
 if __name__ == "__main__":
     main()
