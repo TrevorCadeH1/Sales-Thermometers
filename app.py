@@ -762,7 +762,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
 def main():
     # Authentication
-    name, authentication_status, username = authenticator.login(form_name='Company Login', location='main')
+    name, authentication_status, username = authenticator.login('Login', 'main')
     
     if authentication_status == False:
         st.error('Username/password is incorrect')
@@ -771,7 +771,7 @@ def main():
         # Move Logout button to the right side of the screen using columns
         col_right, col_right = st.columns([8, 1])
         with col_right:
-            authenticator.logout(button_name='Logout', location='main')
+            authenticator.logout('Logout', 'main')
         user_company = company_map.get(username)
         
         # Special handling for WLCNA - show all companies
