@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit_authenticator as stauth
 import base64
 import pandas as pd
 import plotly.graph_objects as go
@@ -8,16 +7,6 @@ import numpy as np
 from datetime import datetime
 import plotly.io as pio
 import os
-import time
-try:
-    from config import (EXCEL_FILE_PATH, REFRESH_INTERVAL)
-except ImportError:
-    # Fallback configuration if config.py doesn't exist
-    EXCEL_FILE_PATH = r"C:\Users\hutchisontr\sales_dashboard\SalesThermometerDashboard.xlsx"
-    REFRESH_INTERVAL = 5
-    ENABLE_FILE_MONITORING = True
-    SHOW_LAST_MODIFIED = True
-    ENABLE_UPDATE_NOTIFICATIONS = True
 
 # Register the custom font for Plotly image exports
 def register_font_for_plotly():
@@ -28,11 +17,9 @@ def register_font_for_plotly():
         
         # Check if font file exists
         if os.path.exists(font_path):
-            # Configure Plotly for better font support using updated API
-            try:
-                pio.defaults.default_format = "png"
-            except AttributeError:
-                pio.kaleido.scope.default_format = "png"
+            # Configure Plotly for better font support
+            pio.kaleido.scope.default_format = "png"
+            pio.kaleido.scope.default_engine = "kaleido"
             
             # Set a more compatible default template
             pio.templates.default = "plotly_white"
@@ -60,102 +47,6 @@ def register_font_for_plotly():
 
 # Register the font
 font_registered = register_font_for_plotly()
-
-# Initialize session state for file monitoring
-if 'last_modified' not in st.session_state:
-    st.session_state.last_modified = None
-if 'data_cache' not in st.session_state:
-    st.session_state.data_cache = None
-
-def get_file_modified_time(file_path):
-    """Get the last modified time of a file"""
-    try:
-        if os.path.exists(file_path):
-            return os.path.getmtime(file_path)
-        return None
-    except Exception:
-        return None
-
-def check_file_update():
-    """Check if the Excel file has been updated and clear cache if needed"""
-    if not os.path.exists(EXCEL_FILE_PATH):
-        return False
-    
-    current_modified = get_file_modified_time(EXCEL_FILE_PATH)
-    
-    if current_modified is None:
-        return False
-    
-    if st.session_state.last_modified is None:
-        st.session_state.last_modified = current_modified
-        return True
-    
-    if current_modified != st.session_state.last_modified:
-        st.session_state.last_modified = current_modified
-        # Clear the cached data
-        st.cache_data.clear()
-        st.session_state.data_cache = None
-        return True
-    
-    return False
-
-# Authentication setup - Company-based logins
-# Define shared logins for each company (replace with your actual companies and secure passwords)
-credentials = {
-    'usernames': {
-        'wbsc': {
-            'name': 'WBSC Employee',
-            'password': '$2b$12$ONZBySg1aVVaCC3e922f0.K.5GmXovgbqq9vcidZY9aOu1DybpMcS'  # Hashed 'WBSC123'
-        },
-        'wlac': {
-            'name': 'WLAC Employee',
-            'password': '$2b$12$.u8ILU9wGWCGOmDMAlt.aOqU4eWEQZcMRaMfJHdPAuOPkaRrUEdu.'  # Hashed 'WLAC123'
-        },
-        'wwg': {
-            'name': 'WWG Employee',
-            'password': '$2b$12$DIOUizg1n//CExo..QU3wuZBo0ampX9KtSGyWqbshz2xqmDtcwEV2'  # Hashed 'WWG123'
-        },
-        'wca': {
-            'name': 'WCA Employee',
-            'password': '$2b$12$s/8TF.9YiVM0haUTCwnoluBvasl9aqhbfD2HpF7hvXlCjT4JuSWii'  # Hashed 'WCA123'
-        },
-        'wusa': {
-            'name': 'WUSA Employee',
-            'password': '$2b$12$4cEK68lcevhWNuCdC4/bG.ovKORlcG12Pe8WBW2lN.LHOD8jAJOsm'  # Hashed 'WUSA123'
-        },
-        'wmcf': {
-            'name': 'WMCF Employee',
-            'password': '$2b$12$G/aDDkQOIMMhB61nBBbde.pliLY4GUPbaaCk6CvMl79NR2oLRhMP.'  # Hashed 'WMCF123'
-        },
-        'dakota': {
-            'name': 'DAKOTA Employee',
-            'password': '$2b$12$jVIArnob9DPeMaMYyznykew4bmIz91qTPe0So8BqLp0ntZb3LdvqW'  # Hashed 'DAKOTA123'
-        },
-        'wlcna': {
-            'name': 'WLCNA Admin',
-            'password': '$2b$12$5bYiWMyvxuNnDq7ooF2UkORsSdf2yEl0pdyqqnbrUOO63aJFN60Pi'  # Hashed 'WLCNA123'
-        }
-    }
-}
-
-company_map = {
-    'wbsc': 'WBSC',
-    'wlac': 'WLAC',
-    'wwg': 'WWG',
-    'wca': 'WCA',
-    'wusa': 'WUSA',
-    'wmcf': 'WMCF',
-    'dakota': 'DAKOTA',
-    'wlcna': 'WLCNA'
-}  # Maps username to company name (must match Excel exactly)
-
-# Create authenticator object (v0.2.3 format)
-authenticator = stauth.Authenticate(
-    credentials,
-    'sales_dashboard',  # cookie name
-    'abcdef123456',     # cookie key (change to secure random key)
-    1                   # cookie_expiry_days
-)
 
 # Set page config
 st.set_page_config(
@@ -210,148 +101,8 @@ st.markdown(
 )
 
 @st.cache_data
-def load_data_from_file(file_path, file_modified_time):
-    """Load and process the Excel data from file path with file modification time as cache key"""
-    try:
-        if not os.path.exists(file_path):
-            st.error(f"Excel file not found at: {file_path}")
-            return None, None, None
-            
-        # Read the Excel file with specific structure
-        # Row 1: Title, Row 2: Company names, Row 3: Sales/GP headers, Row 4+: Data
-        
-        # Read raw data
-        daily_df_raw = pd.read_excel(file_path, sheet_name=0, header=None)
-        
-        # Extract company names from row 2 (index 1)
-        company_row = daily_df_raw.iloc[1]  # Row 2 (0-indexed as 1)
-        
-        # Extract sales/GP headers from row 3 (index 2)  
-        header_row = daily_df_raw.iloc[2]  # Row 3 (0-indexed as 2)
-        
-        # Build proper column names by combining company + sales/GP
-        columns = ['Day']  # First column is Day (now in column AA)
-        companies = []
-        
-        # Track the current company being processed
-        current_company = None
-        
-        for i in range(27, len(company_row)):  # Start from column AB (index 27, was column B index 1)
-            company = company_row.iloc[i]
-            header = header_row.iloc[i]
-            
-            # If we find a company name, store it as current company
-            if pd.notna(company) and str(company).strip():
-                current_company = str(company).strip()
-                if current_company not in companies:
-                    companies.append(current_company)
-            
-            # Use the current company with the header (Sales or GP)
-            if current_company and pd.notna(header):
-                column_name = f"{current_company} {header}".strip()
-                columns.append(column_name)
-            elif current_company:
-                # If no header but we have a company, assume it alternates Sales/GP
-                # Check if previous column was Sales, then this should be GP
-                if len(columns) > 1 and 'Sales' in columns[-1]:
-                    column_name = f"{current_company} GP"
-                else:
-                    column_name = f"{current_company} Sales"
-                columns.append(column_name)
-            else:
-                columns.append(f"Col_{i}")
-        
-        # Read the actual data starting from row 4 (index 3)
-        data_df = pd.read_excel(file_path, sheet_name=0, header=None, skiprows=3)
-        
-        # Extract only the columns we need (starting from column AA - index 26)
-        if data_df.shape[1] > 26:  # Ensure we have enough columns
-            # Take Day column (AA, index 26) and all following columns
-            data_df = data_df.iloc[:, 26:]  # Start from column AA (index 26)
-            data_df.columns = columns[:len(data_df.columns)]  # Assign our custom column names
-        else:
-            st.error("Excel file doesn't have enough columns. Data should start from column AA.")
-            return None, None, None
-        
-        # Read goal data from second tab
-        goals_df = pd.read_excel(file_path, sheet_name=1)
-        # Extract month from cell A13 (row 12, col 0) of second tab
-        try:
-            month_cell = pd.read_excel(file_path, sheet_name=1, header=None).iloc[12, 0]
-            month_name_from_excel = str(month_cell) if pd.notna(month_cell) else None
-        except Exception:
-            month_name_from_excel = None
-        
-        # Process the data into our required format
-        processed_data = []
-        
-        for _, row in data_df.iterrows():
-            # Get the day number - clean and convert to numeric
-            if 'Day' in data_df.columns and pd.notna(row['Day']):
-                day_value = row['Day']
-                # Try to convert to integer, skip if it's text like "Total"
-                try:
-                    day = int(day_value) if pd.notna(day_value) else row.name + 1
-                except (ValueError, TypeError):
-                    # Skip rows with non-numeric day values (like "Total" row)
-                    continue
-            else:
-                day = row.name + 1
-            
-            # Process each company
-            for company in companies:
-                sales_col = f"{company} Sales"
-                gp_col = f"{company} GP"
-                
-                if sales_col in data_df.columns and gp_col in data_df.columns:
-                    sales_value = row[sales_col] if pd.notna(row[sales_col]) else 0
-                    gp_value = row[gp_col] if pd.notna(row[gp_col]) else 0
-                    
-                    # Only add if at least one value is non-zero
-                    if sales_value != 0 or gp_value != 0:
-                        processed_data.append({
-                            'Day': day,
-                            'Company': company,
-                            'Sales': sales_value,
-                            'Gross_Profit': gp_value
-                        })
-        
-        # Convert to DataFrame
-        df = pd.DataFrame(processed_data)
-        
-        # Ensure Day column is numeric
-        if not df.empty and 'Day' in df.columns:
-            df['Day'] = pd.to_numeric(df['Day'], errors='coerce')
-            # Remove any rows where Day couldn't be converted to numeric
-            df = df.dropna(subset=['Day'])
-        
-        if df.empty:
-            st.error("No data found. Please check that your Excel file has the correct format.")
-            return None, None, None
-        
-        # Merge with goals data
-        # Always use the 105% columns for goals
-        goals_dict = {}
-        for _, row in goals_df.iterrows():
-            company = row['Company']
-            sales_goal = row.get('105% Sales', 0)
-            gp_goal = row.get('105% GP', 0)
-            goals_dict[company] = {
-                'Sales_Goal': sales_goal,
-                'GP_Goal': gp_goal
-            }
-        # Add goals to the main dataframe
-        df['Sales_Goal'] = df['Company'].map(lambda x: goals_dict.get(x, {}).get('Sales_Goal', 0))
-        df['GP_Goal'] = df['Company'].map(lambda x: goals_dict.get(x, {}).get('GP_Goal', 0))
-        
-        return df, goals_df, month_name_from_excel
-    except Exception as e:
-        st.error(f"Error loading data from {file_path}: {e}")
-        return None, None, None
-
-@st.cache_data
 def load_data(file_path):
-    """Load and process the Excel data from two tabs (legacy function for uploaded files)"""
+    """Load and process the Excel data from two tabs"""
     try:
         # Read the Excel file with specific structure
         # Row 1: Title, Row 2: Company names, Row 3: Sales/GP headers, Row 4+: Data
@@ -360,35 +111,25 @@ def load_data(file_path):
         daily_df_raw = pd.read_excel(file_path, sheet_name=0, header=None)
         
         # Extract company names from row 2 (index 1)
-        company_row = daily_df_raw.iloc[1]  # Row 2 (0-indexed as 1)
-        
-        # Extract sales/GP headers from row 3 (index 2)  
-        header_row = daily_df_raw.iloc[2]  # Row 3 (0-indexed as 2)
-        
+        company_row = daily_df_raw.iloc[1]
+        # Extract sales/GP headers from row 3 (index 2)
+        header_row = daily_df_raw.iloc[2]
         # Build proper column names by combining company + sales/GP
-        columns = ['Day']  # First column is Day (now in column AA)
+        columns = ['Day']  # First column is Day
         companies = []
-        
-        # Track the current company being processed
         current_company = None
-        
-        for i in range(27, len(company_row)):  # Start from column AB (index 27, was column B index 1)
+        # Start from column AA (index 26)
+        for i in range(26, len(company_row)):
             company = company_row.iloc[i]
             header = header_row.iloc[i]
-            
-            # If we find a company name, store it as current company
             if pd.notna(company) and str(company).strip():
                 current_company = str(company).strip()
                 if current_company not in companies:
                     companies.append(current_company)
-            
-            # Use the current company with the header (Sales or GP)
             if current_company and pd.notna(header):
                 column_name = f"{current_company} {header}".strip()
                 columns.append(column_name)
             elif current_company:
-                # If no header but we have a company, assume it alternates Sales/GP
-                # Check if previous column was Sales, then this should be GP
                 if len(columns) > 1 and 'Sales' in columns[-1]:
                     column_name = f"{current_company} GP"
                 else:
@@ -396,24 +137,17 @@ def load_data(file_path):
                 columns.append(column_name)
             else:
                 columns.append(f"Col_{i}")
-        
-        # Read the actual data starting from row 4 (index 3)
+        # Read the actual data starting from row 4 (index 3), and only use columns from AA onwards
         data_df = pd.read_excel(file_path, sheet_name=0, header=None, skiprows=3)
-        
-        # Extract only the columns we need (starting from column AA - index 26)
-        if data_df.shape[1] > 26:  # Ensure we have enough columns
-            # Take Day column (AA, index 26) and all following columns
-            data_df = data_df.iloc[:, 26:]  # Start from column AA (index 26)
-            data_df.columns = columns[:len(data_df.columns)]  # Assign our custom column names
-        else:
-            st.error("Excel file doesn't have enough columns. Data should start from column AA.")
-            return None, None, None
+        # Only keep columns from AA onwards (index 26+)
+        data_df = data_df.iloc[:, [0] + list(range(26, data_df.shape[1]))]
+        data_df.columns = columns[:len(data_df.columns)]
         
         # Read goal data from second tab
         goals_df = pd.read_excel(file_path, sheet_name=1)
-        # Extract month from cell A13 (row 12, col 0) of second tab
+        # Extract month from cell F2 (row 1, col 5) of second tab
         try:
-            month_cell = pd.read_excel(file_path, sheet_name=1, header=None).iloc[12, 0]
+            month_cell = pd.read_excel(file_path, sheet_name=1, header=None).iloc[1, 5]
             month_name_from_excel = str(month_cell) if pd.notna(month_cell) else None
         except Exception:
             month_name_from_excel = None
@@ -520,45 +254,31 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
     # Percentages adjusted for tube position, capped at 100%
     percent_filled = min(current_total / monthly_target, 1.0) if monthly_target > 0 else 0
+    previous_days_percent = min((previous_days_value / monthly_target) * tube_height, tube_height) if monthly_target > 0 else 0
+    yesterday_percent = min((yesterday_value / monthly_target) * tube_height, tube_height - previous_days_percent) if monthly_target > 0 else 0
     total_percent = percent_filled * tube_height
-    
-    # Calculate individual bar heights - ensure they don't exceed the total available height
-    previous_days_percent = (previous_days_value / monthly_target) * tube_height if monthly_target > 0 else 0
-    yesterday_percent = (yesterday_value / monthly_target) * tube_height if monthly_target > 0 else 0
-    
-    # Cap the total to tube_height and adjust proportionally if needed
-    total_bars_height = previous_days_percent + yesterday_percent
-    if total_bars_height > tube_height:
-        # Scale down proportionally to fit within tube
-        scale_factor = tube_height / total_bars_height
-        previous_days_percent *= scale_factor
-        yesterday_percent *= scale_factor
-    
     expected_percent = (expected_position / monthly_target) * tube_height + tube_start_y if monthly_target > 0 else tube_start_y
 
     fig = go.Figure()
 
-    # Use a single stacked bar approach to eliminate any gaps
-    # Bottom segment (previous days) - red
+    # Red fill (previous days) - bottom portion
     fig.add_trace(go.Bar(
         x=["Thermometer"],
         y=[previous_days_percent],
         base=[tube_start_y],
-        marker=dict(color='#CC0000', line=dict(width=0)),
+        marker=dict(color='#CC0000'),
         name='Previous Days',
-        width=[0.25],
-        hovertemplate=f'Previous Days: ${previous_days_value:,.0f}<extra></extra>',
+        width=0.25,
     ))
 
-    # Top segment (yesterday's sales) - green, stacked on top
+    # Green fill (yesterday's sales) - top portion (larger text)
     fig.add_trace(go.Bar(
         x=["Thermometer"],
         y=[yesterday_percent],
-        base=[tube_start_y + previous_days_percent],
-        marker=dict(color='#008448', line=dict(width=0)),
+        base=[previous_days_percent + tube_start_y],
+        marker=dict(color='#008448'),
         name="Yesterday's Sales",
-        width=[0.25],
-        hovertemplate=f"Yesterday's Sales: ${yesterday_value:,.0f}<extra></extra>",
+        width=0.25,
     ))
 
     # Add arrow annotation pointing to the top of the green section (yesterday's sales)
@@ -761,326 +481,150 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
 
 def main():
-    # Authentication
-    name, authentication_status, username = authenticator.login('Company Login', 'main')
+    st.markdown(
+        "<h1>Sales & Gross Profit Thermometer Dashboard</h1>",
+        unsafe_allow_html=True
+    )
+    st.markdown("---")
     
-    if authentication_status == False:
-        st.error('Username/password is incorrect')
-    elif authentication_status:
-        # User is authenticated - show their company's dashboard
-        authenticator.logout('Logout', 'main')
-        user_company = company_map.get(username)
+    # File uploader
+    st.markdown(
+        "<div style='font-size:16px;'>Upload your Excel file with daily data (tab 1) and goals (tab 2)</div>",
+        unsafe_allow_html=True
+    )
+    uploaded_file = st.file_uploader(
+        "", 
+        type=['xlsx', 'xls']
+    )
+    
+    if uploaded_file is not None:
+        # Load data
+        df, goals_df, month_name_A13 = load_data(uploaded_file)
         
-        # Special handling for WLCNA - show all companies
-        if username == 'wlcna':
-            st.markdown(
-                f"<h1>WLCNA - All Companies Dashboard</h1>",
+        if df is not None and goals_df is not None:
+            # Get unique companies
+            companies = df['Company'].unique()
+            # Sidebar for controls
+            st.sidebar.markdown(
+                "<h2>Dashboard Controls</h2>",
                 unsafe_allow_html=True
             )
-            st.markdown(f"**Welcome, WLCNA Employee! You are viewing data for all NA companies.**")
             
-            # Initialize auto-refresh timer - but we'll control it manually for this page
-            if 'refresh_timer' not in st.session_state:
-                st.session_state.refresh_timer = time.time()
+            # Total days in month for each company
+            st.sidebar.markdown(
+                "<div style='font-size:16px;'>Total Days in Month</div>",
+                unsafe_allow_html=True
+            )
             
-            # Initialize update trigger for total days
-            if 'force_update' not in st.session_state:
-                st.session_state.force_update = False
+            # Create a dictionary to store total days for each company
+            company_total_days = {}
+            for company in companies:
+                company_total_days[company] = st.sidebar.number_input(
+                    f"{company}:", 
+                    value=22, 
+                    min_value=1, 
+                    max_value=31, 
+                    key=f"total_days_input_{company}"
+                )
             
-            # Check if it's time to refresh (but only if not manually updating total days)
-            if (time.time() - st.session_state.refresh_timer > REFRESH_INTERVAL and 
-                not st.session_state.get('updating_total_days', False)):
-                check_file_update()  # This will clear cache if file was updated
-                st.session_state.refresh_timer = time.time()
-                st.rerun()
+            # Display summary stats
+            st.markdown(
+                "<h3 style='font-weight:bold;'>Summary Statistics</h3>",
+                unsafe_allow_html=True
+            )
+            col1, col2, col3, col4 = st.columns(4)
+            
+            total_sales = df['Sales'].sum()
+            total_gross_profit = df['Gross_Profit'].sum()
+            days_elapsed = len(df['Day'].unique())
+            
+            with col1:
+                st.markdown(
+                    f"<div style='font-size:18px;'>Total Sales</div>",
+                    unsafe_allow_html=True
+                )
+                st.metric("", f"${total_sales:,.0f}")
+            with col2:
+                st.markdown(
+                    f"<div style='font-size:18px;'>Total Gross Profit</div>",
+                    unsafe_allow_html=True
+                )
+                st.metric("", f"${total_gross_profit:,.0f}")
+            with col3:
+                st.markdown(
+                    f"<div style='font-size:18px;'>Total Sales Goal (105%)</div>",
+                    unsafe_allow_html=True
+                )
+                # Get total sales goal from cell D10 (row 9, col 3) of second tab
+                try:
+                    total_sales_goal_cell = pd.read_excel(uploaded_file, sheet_name=1, header=None).iloc[9, 3]
+                    total_sales_goal_value = total_sales_goal_cell if pd.notna(total_sales_goal_cell) else 0
+                except Exception:
+                    total_sales_goal_value = 0
+                st.metric("", f"${total_sales_goal_value:,.0f}")
+            with col4:
+                st.markdown(
+                    f"<div style='font-size:18px;'>Days Elapsed</div>",
+                    unsafe_allow_html=True
+                )
+                st.metric("", days_elapsed)
             
             st.markdown("---")
             
-            # Load data from fixed file path
-            if os.path.exists(EXCEL_FILE_PATH):
-                file_modified_time = get_file_modified_time(EXCEL_FILE_PATH)
-                df, goals_df, month_name_A13 = load_data_from_file(EXCEL_FILE_PATH, file_modified_time)
+            # Create thermometers
+            st.markdown(
+                "<h4>Sales Thermometers</h4>",
+                unsafe_allow_html=True
+            )
+            cols = st.columns(4)  # 4 thermometers per row
+
+            for i, company in enumerate(companies):
+                company_data = df[df['Company'] == company].sort_values('Day')
                 
-                if df is not None and goals_df is not None:
-                    # Get all companies from the data
-                    all_companies = ['WBSC', 'WLAC', 'WWG', 'WCA', 'WUSA', 'WMCF', 'DAKOTA']
-                    
-                    # Sidebar for controls
-                    st.sidebar.markdown(
-                        f"<h2>All Companies Controls</h2>",
-                        unsafe_allow_html=True
+                with cols[i % 4]:
+                    fig = create_thermometer(
+                        company_data,
+                        company,
+                        "Sales",
+                        company_total_days[company],
+                        month_name_A13
                     )
-                    
-                    # Initialize session state for actual total days (used for calculations)
-                    if 'actual_total_days' not in st.session_state:
-                        st.session_state.actual_total_days = {company: 22 for company in all_companies}
-                    
-                    # Use a form to prevent auto-refresh on input changes
-                    with st.sidebar.form("total_days_form_all"):
-                        st.markdown("**Adjust Total Days for Each Company:**")
-                        
-                        temp_total_days = {}
-                        for company in all_companies:
-                            temp_total_days[company] = st.number_input(
-                                f"{company} Total Days:", 
-                                value=st.session_state.actual_total_days[company], 
-                                min_value=1, 
-                                max_value=31, 
-                                key=f"form_total_days_{company}_all"
-                            )
-                        
-                        # Submit button - form prevents auto-refresh until this is clicked
-                        submitted = st.form_submit_button("Update Total Days (Click Twice)")
-                    
-                    # Handle form submission outside the form
-                    if submitted:
-                        # Update the session state with new values
-                        for company in all_companies:
-                            st.session_state.actual_total_days[company] = temp_total_days[company]
-                        st.rerun()
-                    
-                    # Use actual total days for calculations
-                    company_total_days = st.session_state.actual_total_days
-                    
-                    # Display overall summary stats
-                    st.markdown(
-                        f"<h3 style='font-weight:bold;'>Overall Summary Statistics</h3>",
-                        unsafe_allow_html=True
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # Start new row every 4
+                if (i + 1) % 4 == 0 and i + 1 < len(companies):
+                    cols = st.columns(4)
+
+            
+            st.markdown("---")
+            st.markdown(
+                "<h4>Gross Profit Thermometers</h4>",
+                unsafe_allow_html=True
+            )
+            cols = st.columns(4)  # 4 thermometers per row
+
+            for i, company in enumerate(companies):
+                company_data = df[df['Company'] == company].sort_values('Day')
+                
+                with cols[i % 4]:
+                    fig = create_thermometer(
+                        company_data,
+                        company,
+                        "Gross Profit",
+                        company_total_days[company],
+                        month_name_A13
                     )
-                    
-                    total_sales = df['Sales'].sum()
-                    total_gp = df['Gross_Profit'].sum()
-                    # Get unique goals per company (avoid counting each company's goal multiple times)
-                    total_sales_goal = df.drop_duplicates('Company')['Sales_Goal'].sum()
-                    total_gp_goal = df.drop_duplicates('Company')['GP_Goal'].sum()
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Total Sales", f"${total_sales:,.0f}")
-                    with col2:
-                        st.metric("Total GP", f"${total_gp:,.0f}")
-                    with col3:
-                        st.metric("Total Sales Goal", f"${total_sales_goal:,.0f}")
-                    with col4:
-                        st.metric("Total GP Goal", f"${total_gp_goal:,.0f}")
-                    
-                    st.markdown("---")
-                    
-                    # Display last Excel update date below summary stats
-                    last_modified = st.session_state.last_modified
-                    if last_modified:
-                        last_modified_dt = datetime.fromtimestamp(last_modified)
-                        st.markdown(f"<div style='font-size:18px; color:#008448; margin-top:10px;'>Data Updated Through <b>{last_modified_dt.strftime('%B %d, %Y %I:%M %p')}</b></div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div style='font-size:18px; color:#008448; margin-top:10px;'>Data Updated Through <b>Unknown</b></div>", unsafe_allow_html=True)
-                    
-                    # Sales Thermometers Section
-                    st.markdown(
-                        f"<h2 style='text-align: center; color: #008448;'>Sales Thermometers</h2>",
-                        unsafe_allow_html=True
-                    )
-                    
-                    # Create 4 rows of thermometers (2 companies per row for better layout)
-                    for i in range(0, len(all_companies), 4):
-                        cols = st.columns(4)
-                        for j, company in enumerate(all_companies[i:i+4]):
-                            if j < len(cols):
-                                company_data = df[df['Company'] == company].sort_values('Day')
-                                if not company_data.empty:
-                                    with cols[j]:
-                                        fig_sales = create_thermometer(
-                                            company_data,
-                                            company,
-                                            "Sales",
-                                            company_total_days[company],
-                                            month_name_A13
-                                        )
-                                        st.plotly_chart(fig_sales, use_container_width=True)
-                    
-                    st.markdown("---")
-                    
-                    # Gross Profit Thermometers Section
-                    st.markdown(
-                        f"<h2 style='text-align: center; color: #008448;'>Gross Profit Thermometers</h2>",
-                        unsafe_allow_html=True
-                    )
-                    
-                    # Create 4 rows of thermometers (2 companies per row for better layout)
-                    for i in range(0, len(all_companies), 4):
-                        cols = st.columns(4)
-                        for j, company in enumerate(all_companies[i:i+4]):
-                            if j < len(cols):
-                                company_data = df[df['Company'] == company].sort_values('Day')
-                                if not company_data.empty:
-                                    with cols[j]:
-                                        fig_gp = create_thermometer(
-                                            company_data,
-                                            company,
-                                            "Gross Profit",
-                                            company_total_days[company],
-                                            month_name_A13
-                                        )
-                                        st.plotly_chart(fig_gp, use_container_width=True)
-                else:
-                    st.error("Could not load data from Excel file.")
-            else:
-                st.error(f"Excel file not found at {EXCEL_FILE_PATH}")
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # Start new row every 4
+                if (i + 1) % 4 == 0 and i + 1 < len(companies):
+                    cols = st.columns(4)
+
         else:
-            # Regular company dashboard
-            st.markdown(
-                f"<h1>{user_company} Sales & Gross Profit Dashboard</h1>",
-                unsafe_allow_html=True
-            )
-            st.markdown(f"**Welcome, {name}! You are viewing data for: {user_company}**")
-            
-            # Initialize auto-refresh timer
-            if 'refresh_timer' not in st.session_state:
-                st.session_state.refresh_timer = time.time()
-            
-            # Check if it's time to refresh (but only if not manually updating total days)
-            if (time.time() - st.session_state.refresh_timer > REFRESH_INTERVAL and 
-                not st.session_state.get('updating_total_days', False)):
-                check_file_update()  # This will clear cache if file was updated
-                st.session_state.refresh_timer = time.time()
-                st.rerun()
-            
-            st.markdown("---")
-            
-            # Load data from fixed file path
-            if os.path.exists(EXCEL_FILE_PATH):
-                file_modified_time = get_file_modified_time(EXCEL_FILE_PATH)
-                df, goals_df, month_name_A13 = load_data_from_file(EXCEL_FILE_PATH, file_modified_time)
-                
-                if df is not None and goals_df is not None:
-                    # Filter data for only the authenticated user's company
-                    company_data = df[df['Company'] == user_company].sort_values('Day')
-                    
-                    if company_data.empty:
-                        st.warning(f"No data found for {user_company}. Please check that your Excel file contains data for this company.")
-                        return
-                    
-                    # Sidebar for controls
-                    st.sidebar.markdown(
-                        f"<h2>{user_company} Controls</h2>",
-                        unsafe_allow_html=True
-                    )
-                    
-                    # Total days in month for the company
-                    st.sidebar.markdown(
-                        "<div style='font-size:16px;'>Total Days in Month</div>",
-                        unsafe_allow_html=True
-                    )
-                    
-                    # Initialize session state for actual total days (used for calculations)
-                    if f"actual_total_days_{user_company}" not in st.session_state:
-                        st.session_state[f"actual_total_days_{user_company}"] = 22
-                    
-                    # Use a form to prevent auto-refresh on input changes
-                    with st.sidebar.form(f"total_days_form_{user_company}"):
-                        temp_total_days = st.number_input(
-                            f"{user_company} Total Days:", 
-                            value=st.session_state[f"actual_total_days_{user_company}"], 
-                            min_value=1, 
-                            max_value=31, 
-                            key=f"form_total_days_{user_company}"
-                        )
-                        
-                        # Submit button - form prevents auto-refresh until this is clicked
-                        submitted = st.form_submit_button("Update Total Days (Click Twice)")
-                    
-                    # Handle form submission outside the form
-                    if submitted:
-                        st.session_state[f"actual_total_days_{user_company}"] = temp_total_days
-                        st.rerun()
-                    
-                    # Use actual total days for calculations
-                    total_days = st.session_state[f"actual_total_days_{user_company}"]
-                    
-                    # Display summary stats for the company
-                    st.markdown(
-                        f"<h3 style='font-weight:bold;'>{user_company} Summary Statistics</h3>",
-                        unsafe_allow_html=True
-                    )
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    company_sales = company_data['Sales'].sum()
-                    company_gross_profit = company_data['Gross_Profit'].sum()
-                    days_elapsed = len(company_data['Day'].unique())
+            st.error("Failed to load data. Please check your Excel file format.")
+    
+    else:
+        st.info("Please upload your Excel file to get started!")
 
-                    # Get company goals
-                    company_sales_goal = company_data['Sales_Goal'].iloc[0] if len(company_data) > 0 else 0
-                    company_gp_goal = company_data['GP_Goal'].iloc[0] if len(company_data) > 0 else 0
-
-                    with col1:
-                        st.markdown(
-                            f"<div style='font-size:18px;'>Total Sales</div>",
-                            unsafe_allow_html=True
-                        )
-                        st.metric("Total Sales", f"${company_sales:,.0f}", label_visibility="collapsed")
-                    with col2:
-                        st.markdown(
-                            f"<div style='font-size:18px;'>Total Gross Profit</div>",
-                            unsafe_allow_html=True
-                        )
-                        st.metric("Total GP", f"${company_gross_profit:,.0f}", label_visibility="collapsed")
-                    with col3:
-                        st.markdown(
-                            f"<div style='font-size:18px;'>Sales Goal (105%)</div>",
-                            unsafe_allow_html=True
-                        )
-                        st.metric("Sales Goal", f"${company_sales_goal:,.0f}", label_visibility="collapsed")
-                    with col4:
-                        st.markdown(
-                            f"<div style='font-size:18px;'>Days Elapsed</div>",
-                            unsafe_allow_html=True
-                        )
-                        st.metric("Days", days_elapsed, label_visibility="collapsed")
-
-                    st.markdown("---")
-                    
-                    # Display last Excel update date below summary stats (for company page)
-                    last_modified = st.session_state.last_modified
-                    if last_modified:
-                        last_modified_dt = datetime.fromtimestamp(last_modified)
-                        st.markdown(f"<div style='font-size:18px; color:#008448; margin-top:10px;'>Data Updated Through <b>{last_modified_dt.strftime('%B %d, %Y %I:%M %p')}</b></div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div style='font-size:18px; color:#008448; margin-top:10px;'>Data Updated Through <b>Unknown</b></div>", unsafe_allow_html=True)
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    # Create thermometers for the authenticated company only
-                    # Use 4 columns to maintain original sizing (empty columns on sides)
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col2:
-                        st.markdown(
-                            f"<h4>{user_company} Sales Thermometer</h4>",
-                            unsafe_allow_html=True
-                        )
-                        fig_sales = create_thermometer(
-                            company_data,
-                            user_company,
-                            "Sales",
-                            total_days,
-                            month_name_A13
-                        )
-                        st.plotly_chart(fig_sales, use_container_width=True)
-                    
-                    with col3:
-                        st.markdown(
-                            f"<h4>{user_company} Gross Profit Thermometer</h4>",
-                            unsafe_allow_html=True
-                        )
-                        fig_gp = create_thermometer(
-                            company_data,
-                            user_company,
-                            "Gross Profit",
-                            total_days,
-                            month_name_A13
-                        )
-                        st.plotly_chart(fig_gp, use_container_width=True)
-                else:
-                    st.error("Failed to load data. Please check your Excel file format.")
-            else:
-                st.error(f"Excel file not found at: `{EXCEL_FILE_PATH}`")
-                st.info("Please update the `EXCEL_FILE_PATH` variable in the code to point to your Excel file.")
 if __name__ == "__main__":
     main()
