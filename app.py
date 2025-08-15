@@ -254,9 +254,14 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
 
     # Percentages adjusted for tube position, capped at 100%
     percent_filled = min(current_total / monthly_target, 1.0) if monthly_target > 0 else 0
-    previous_days_percent = min((previous_days_value / monthly_target) * tube_height, tube_height) if monthly_target > 0 else 0
-    yesterday_percent = min((yesterday_value / monthly_target) * tube_height, tube_height - previous_days_percent) if monthly_target > 0 else 0
-    total_percent = percent_filled * tube_height
+    total_fill_height = percent_filled * tube_height
+    # Calculate the proportion of previous days and yesterday relative to total
+    previous_days_percent = (previous_days_value / current_total) * total_fill_height if current_total > 0 else 0
+    yesterday_percent = (yesterday_value / current_total) * total_fill_height if current_total > 0 else 0
+    # Ensure their sum matches total_fill_height exactly
+    if previous_days_percent + yesterday_percent > total_fill_height:
+        # Adjust yesterday_percent to fill exactly
+        yesterday_percent = total_fill_height - previous_days_percent
     expected_percent = (expected_position / monthly_target) * tube_height + tube_start_y if monthly_target > 0 else tube_start_y
 
     fig = go.Figure()
@@ -266,7 +271,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         x=["Thermometer"],
         y=[previous_days_percent],
         base=[tube_start_y],
-        marker=dict(color='#CC0000'),
+        marker=dict(color='#CC0000', line=dict(width=0)),
         name='Previous Days',
         width=0.25,
     ))
@@ -276,7 +281,7 @@ def create_thermometer(company_data, company_name, metric_type="Sales", total_da
         x=["Thermometer"],
         y=[yesterday_percent],
         base=[previous_days_percent + tube_start_y],
-        marker=dict(color='#008448'),
+        marker=dict(color='#008448', line=dict(width=0)),
         name="Yesterday's Sales",
         width=0.25,
     ))
@@ -571,55 +576,31 @@ def main():
             
             st.markdown("---")
             
-            # Create thermometers
-            st.markdown(
-                "<h4>Sales Thermometers</h4>",
-                unsafe_allow_html=True
-            )
-            cols = st.columns(4)  # 4 thermometers per row
-
-            for i, company in enumerate(companies):
+            # Each company gets its own row, with Sales and GP thermometers in a 4-column layout
+            st.markdown("---")
+            for company in companies:
+                st.markdown(f"<h4 style='margin-top:16px;margin-bottom:8px;'>{company}</h4>", unsafe_allow_html=True)
+                cols = st.columns(4)
                 company_data = df[df['Company'] == company].sort_values('Day')
-                
-                with cols[i % 4]:
-                    fig = create_thermometer(
+                with cols[0]:
+                    fig_sales = create_thermometer(
                         company_data,
                         company,
                         "Sales",
                         company_total_days[company],
                         month_name_A13
                     )
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Start new row every 4
-                if (i + 1) % 4 == 0 and i + 1 < len(companies):
-                    cols = st.columns(4)
-
-            
-            st.markdown("---")
-            st.markdown(
-                "<h4>Gross Profit Thermometers</h4>",
-                unsafe_allow_html=True
-            )
-            cols = st.columns(4)  # 4 thermometers per row
-
-            for i, company in enumerate(companies):
-                company_data = df[df['Company'] == company].sort_values('Day')
-                
-                with cols[i % 4]:
-                    fig = create_thermometer(
+                    st.plotly_chart(fig_sales, use_container_width=True)
+                with cols[1]:
+                    fig_gp = create_thermometer(
                         company_data,
                         company,
                         "Gross Profit",
                         company_total_days[company],
                         month_name_A13
                     )
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Start new row every 4
-                if (i + 1) % 4 == 0 and i + 1 < len(companies):
-                    cols = st.columns(4)
-
+                    st.plotly_chart(fig_gp, use_container_width=True)
+                # Optionally, leave cols[2] and cols[3] empty or use for future content
         else:
             st.error("Failed to load data. Please check your Excel file format.")
     
