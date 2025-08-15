@@ -577,7 +577,6 @@ def main():
             st.markdown("---")
             
             # Each company gets its own row, with Sales and GP thermometers in a 4-column layout
-            st.markdown("---")
             for company in companies:
                 st.markdown(f"<h4 style='margin-top:16px;margin-bottom:8px;'>{company}</h4>", unsafe_allow_html=True)
                 cols = st.columns(4)
